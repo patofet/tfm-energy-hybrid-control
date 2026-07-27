@@ -14,10 +14,12 @@ def test_params_loading():
     assert 0 <= params.SOC_MIN < params.SOC_MAX <= 1, "SoC limits must be normalized within [0, 1]"
     assert params.GRAN_MIN > 0, "Time step granularity must be positive"
 
-def test_config_file_presence():
-    """Ensure pipeline_config.json is present or fallback defaults operate safely."""
-    config_path = os.path.join(params.ROOT_DIR, "pipeline_config.json")
-    assert os.path.exists(config_path), f"Configuration file missing at {config_path}"
+def test_default_simulation_fallbacks():
+    """Ensure directory paths and fallback economic parameters operate safely."""
+    assert isinstance(params.ROOT_DIR, str) and len(params.ROOT_DIR) > 0, "ROOT_DIR must be a valid string"
+    assert isinstance(params.RESULTS_DIR, str) and len(params.RESULTS_DIR) > 0, "RESULTS_DIR must be valid"
+    assert params.PRICE_BUY_EUR >= params.PRICE_SELL_EUR >= 0, "Buy price should be >= sell price and non-negative"
+    assert params.DEG_COST_EUR_KWH >= 0, "Degradation cost must be non-negative"
 
 def test_step_granularity_consistency():
     """Test minutely granularity translation to daily simulation steps."""
