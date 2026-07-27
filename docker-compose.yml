@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  tfm-test:
+    build: .
+    container_name: tfm-energy-test
+    volumes:
+      - .:/app
+    command: pytest tests/ -v
+
+  tfm-pipeline:
+    build: .
+    container_name: tfm-energy-pipeline
+    volumes:
+      - .:/app
+      - ~/tfm_logs:/root/tfm_logs
+    command: python run_pipeline.py

@@ -1,5 +1,10 @@
 # ⚡ Hybrid MPC + Reinforcement Learning Control for Battery Energy Storage Systems
 
+[![TFM Energy Control CI](https://github.com/patofet/tfm-energy-hybrid-control/actions/workflows/ci.yml/badge.svg)](https://github.com/patofet/tfm-energy-hybrid-control/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED.svg?logo=docker)](https://www.docker.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
 > **Master's Thesis (TFM)** — Hierarchical control framework combining Model Predictive Control (MPC) and Deep Reinforcement Learning (PPO) for optimal Battery Energy Storage System (BESS) management in residential energy communities.
 
 ---

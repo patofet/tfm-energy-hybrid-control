@@ -1,0 +1,25 @@
+import os
+import sys
+import pytest
+
+# Add root directory to python path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import params
+
+def test_params_loading():
+    """Verify that core BESS simulation parameters load correctly."""
+    assert params.E_MAX_KWH > 0, "Nominal battery capacity must be strictly positive"
+    assert params.P_MAX_KW > 0, "Max inverter power must be strictly positive"
+    assert 0 <= params.SOC_MIN < params.SOC_MAX <= 1, "SoC limits must be normalized within [0, 1]"
+    assert params.GRAN_MIN > 0, "Time step granularity must be positive"
+
+def test_config_file_presence():
+    """Ensure pipeline_config.json is present or fallback defaults operate safely."""
+    config_path = os.path.join(params.ROOT_DIR, "pipeline_config.json")
+    assert os.path.exists(config_path), f"Configuration file missing at {config_path}"
+
+def test_step_granularity_consistency():
+    """Test minutely granularity translation to daily simulation steps."""
+    expected_steps = int(1440 / params.GRAN_MIN)
+    assert params.STEPS_PER_DAY == expected_steps, f"Expected {expected_steps} steps per day"
