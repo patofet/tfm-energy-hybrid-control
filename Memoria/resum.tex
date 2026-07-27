@@ -1,0 +1,197 @@
+\documentclass[a4paper,12pt]{ThesisStyle}
+\usepackage[utf8]{inputenc}
+\usepackage{thesis-style}
+\usepackage[catalan]{babel}
+\usepackage{amsmath}
+\usepackage{booktabs}
+
+\begin{document}
+
+\pagenumbering{gobble}
+
+\thispagestyle{empty}
+\begin{table}[htb]
+\centering
+\begin{Large}
+\resizebox{\textwidth}{!}{\begin{tabular}{ | l |}
+ \hline
+ \\
+\includegraphics[scale=0.9]{imatges/logo_eps.png} \\[0.7cm]
+\centerline{Treball Final de Màster}\\[1cm]
+\hline
+\\
+Estudi: Màster en Ciència de Dades\\[0.7cm]
+\hline
+\\
+Títol: Control híbrid basat en Aprenentatge per Reforç i Control Predictiu per a\\
+l'optimització segura de sistemes d'emmagatzematge amb bateries\\[0.7cm]
+\hline
+\\
+Document: Resum\\[0.7cm]
+\hline
+\\
+Alumne: David Bruguera Tornés\\[0.7cm]
+\hline
+\\
+Tutor: Andrés El-Fakdi Sencianes\\
+Departament: Enginyeria El\`ectrica, Electr\`onica i Autom\`atica\\
+\`Area: Enginyeria El\`ectrica\\[0.7cm]
+\hline
+\\
+Convocatòria (mes/any): Juny 2026\\[0.7cm]
+\hline
+
+\end{tabular}}
+\end{Large}
+\end{table}
+
+\newpage
+\pagenumbering{arabic}
+
+% ============================================================
+\section*{Introducció i context}
+% ============================================================
+
+La creixent penetració de fonts d'energia renovable distribuïdes introdueix una elevada
+volatilitat en la generació i en els preus de l'electricitat. En aquest escenari, els sistemes
+d'emmagatzematge d'energia en bateria (\textit{Battery Energy Storage Systems}, BESS) són
+elements crítics per aportar flexibilitat i estabilitat. La gestió òptima d'un BESS és complexa
+per dos motius principals: la incertesa estocàstica en generació, demanda i preus futurs, i la
+necessitat de complir estrictes restriccions físiques (estat de càrrega, potència màxima
+d'inversor) per garantir la seguretat i la vida útil dels equips.
+
+Els mètodes clàssics de Control Predictiu basat en Model (MPC) gestionen bé les restriccions,
+però depenen de la precisió del model del sistema i de les previsions. L'Aprenentatge per
+Reforç (RL) s'adapta millor a entorns estocàstics sense necessitar un model explícit, però en
+la seva forma estàndard no garanteix inherentment el compliment de restriccions físiques.
+\textbf{Aquest TFM proposa una arquitectura de control híbrida} que integra ambdós enfocaments per
+obtenir el millor de cadascun: l'adaptabilitat del RL i les garanties de seguretat del MPC.
+
+El cas d'estudi és una comunitat energètica a Cornellà de Llobregat (Barcelona), composta per
+20 habitatges amb una instal·lació fotovoltaica compartida de 15~kW i un BESS de 50~kWh amb
+inversor de 50~kW.
+
+% ============================================================
+\section*{Objectius}
+% ============================================================
+
+L'objectiu principal és dissenyar, implementar i validar una estratègia de control híbrida que
+integri un agent d'Aprenentatge per Reforç amb un \textit{tracker} MPC per operar el BESS de forma
+segura i econòmicament eficient.
+
+Els objectius específics són:
+\begin{enumerate}
+  \item Desenvolupar un entorn de simulació (Gymnasium) integrat amb el simulador de la
+        comunitat energètica, incloent un model de bateria simplificat i perfils de mercat
+        elèctric.
+  \item Implementar un agent PPO (\textit{Proximal Policy Optimization}) que aprengui
+        polítiques de càrrega/descàrrega per maximitzar el benefici econòmic.
+  \item Integrar un \textit{tracker} MPC que segueixi un SoC objectiu proposat per l'agent RL,
+        garantint el compliment de les restriccions físiques de la bateria.
+  \item Comparar el rendiment de l'arquitectura híbrida (MPC+RL) respecte a tres estratègies
+        de referència: MPC greedy d'un sol pas MPC(H=1), MPC amb horitzó de 60 minuts
+        MPC(H=60) i l'agent RL en solitari.
+\end{enumerate}
+
+% ============================================================
+\section*{Procés de desenvolupament}
+% ============================================================
+
+El desenvolupament s'ha estructurat en cinc fases principals:
+
+\textbf{1. Entorn de simulació.} S'ha implementat l'entorn \texttt{BessEnv} seguint la
+interfície Gymnasium, integrat amb el simulador de la comunitat energètica desenvolupat per
+Martí Cabarrocas I~Sánchez en el seu Treball de Fi de Grau. El vector d'observació conté 8 variables
+normalitzades: estat de càrrega de la bateria, generació solar, demanda de l'escola, demanda dels habitatges, preu de compra i preu de venda d'electricitat, i codificació cíclica del temps (sin/cos). El simulador genera 7.300 dies de
+dades (conjunt d'entrenament: 5.840 dies; conjunt de test: 1.460 dies).
+
+\textbf{2. Controlador MPC.} S'ha implementat un controlador MPC basat en CVXPY amb el solver
+CLARABEL en dues variants: greedy d'un sol pas MPC(H=1) i amb horitzó de 60 minuts MPC(H=60).
+El MPC opera amb informació perfecta del pas actual i, dins l'arquitectura híbrida, s'utilitza
+com a \textit{tracker} per seguir referències de SoC.
+
+\textbf{3. Entrenament de l'agent PPO.} L'agent s'ha entrenat durant 2.000.000 de passos sobre
+el conjunt d'entrenament. Un repte clau del disseny ha estat l'ajust de la funció de recompensa:
+amb una penalització de degradació massa elevada, l'agent aprenia la política d'inacció
+(no moure mai la bateria). S'ha calibrat un multiplicador de degradació \texttt{DEG\_PENALTY\_MULT
+= 8.0} que equilibra el benefici econòmic i la protecció de la bateria.
+
+\textbf{4. Arquitectura híbrida MPC+RL.} L'agent RL proposa un SoC objectiu cada 60 minuts.
+El \textit{tracker} MPC resol un problema d'optimització en horitzó de 60 minuts i calcula les
+accions minut a minut per seguir aquesta referència respectant límits de SoC i potència.
+Aquesta arquitectura combina adaptabilitat (RL) i seguretat operativa (MPC).
+
+\textbf{5. Estudi d'ablació.} Per validar les decisions de disseny de la xarxa neuronal de
+l'agent MPC+RL, s'ha realitzat un estudi d'ablació sistemàtic amb 8 configuracions:
+4 funcions d'activació (ReLU, Leaky ReLU, ELU, Tanh) $\times$ 2 valors de GAE-$\lambda$
+(0.95 i 1.00), cadascuna entrenada durant 500.000 timesteps. Les conclusions principals
+confirmen que la configuració original (ReLU, $\lambda=0{,}95$) és pràcticament òptima i que
+totes les configuracions convergeixen a valors similars (rang $<7\%$), evidenciant que el
+\textit{tracker} MPC fa el sistema robust als hiperparàmetres de la xarxa neuronal.
+
+% ============================================================
+\section*{Resultats}
+% ============================================================
+
+L'avaluació comparativa sobre 1.460 dies de test (2.102.400 minuts de simulació) proporciona
+els resultats de la Taula~\ref{taula:resum_resultats}.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\textbf{Mètrica} & \textbf{MPC(H=1)} & \textbf{MPC(H=60)} & \textbf{RL} & \textbf{MPC+RL} \\
+\midrule
+Benefici net (€)          & $-97.826$ & $-97.502$ & $-94.035$ & $\mathbf{-87.142}$ \\
+Estalvi vs MPC(H=1) (€)   & $0$       & $+324$    & $+3.792$  & $\mathbf{+10.684}$ \\
+Estalvi vs MPC(H=1) (\%)  & $0\%$     & $+0{,}3\%$& $+3{,}9\%$& $\mathbf{+10{,}9\%}$ \\
+Cicles complets           & $0{,}0$   & $247{,}3$ & $891{,}7$ & $1.950{,}5$ \\
+SoC mitjà                 & $0{,}000$ & $0{,}010$ & $0{,}230$ & $0{,}705$ \\
+\% temps inactiu          & $100\%$   & $92{,}4\%$& $58{,}9\%$& $72{,}5\%$ \\
+Temps decisió (ms)        & $0{,}63$  & $3{,}77$  & $\mathbf{0{,}13}$ & $2{,}06$ \\
+\bottomrule
+\end{tabular}
+\caption{Comparativa dels quatre controladors sobre 1.460 dies de test.}
+\label{taula:resum_resultats}
+\end{table}
+
+Quatre troballes destacades:
+
+\begin{enumerate}
+  \item \textbf{MPC(H=1) és completament inactiu.} El controlador greedy no pot anticipar
+        períodes favorables sense horitzó de predicció i opta sistemàticament per la inacció
+        (100\% del temps), constituint la cota inferior del sistema.
+
+  \item \textbf{L'agent RL supera el MPC(H=60) en 3.468~€.} Malgrat no tenir accés explícit
+        a previsions de generació i demanda, l'agent aprèn una política de ciclatge
+        temporalment coherent i quasi-perfectament simètrica (44.583,0 vs 44.580,6~kWh en
+        1.460 dies).
+
+  \item \textbf{MPC+RL és el millor en totes les mètriques econòmiques.} Redueix la pèrdua
+        en 10.684~€ (10,9\%) respecte al MPC(H=1) i en 6.892~€ respecte al RL en solitari,
+        equivalent a \textbf{7,32~€/dia d'estalvi}. El \textit{tracker} MPC garanteix la simetria
+        exacta de la càrrega/descàrrega (97.526,5~kWh en ambdues direccions) i un SoC mitjà
+        alt (0,705).
+
+  \item \textbf{Temps de decisió compatibles amb temps real.} Tots quatre controladors
+        operen en menys d'1 minut per pas de decisió (RL: 0,13~ms; MPC+RL: 2,06~ms).
+\end{enumerate}
+
+% ============================================================
+\section*{Conclusions}
+% ============================================================
+
+Aquest TFM ha demostrat que una arquitectura híbrida \textit{RL-guided MPC} és viable i eficient per al
+control segur i econòmicament rendible d'un BESS en una comunitat energètica. Les contribucions
+principals han estat: (1) el disseny i la implementació de l'entorn de simulació \texttt{BessEnv}
+integrat amb el simulador de la comunitat; (2) l'ajust rigorós de la funció de recompensa per
+evitar la política d'inacció; i (3) la validació que el \textit{tracker} MPC garanteix la
+seguretat operativa mentre segueix les referències de SoC proposades per l'agent.
+
+Les línies de treball futur més prometedores inclouen: l'ús de dades de mercat reals en línia per
+complementar els CSVs del simulador; un model de degradació no lineal (dependent de la profunditat
+de descàrrega i de la temperatura); i l'exploració d'algoritmes alternatius com SAC o TD3 dins
+del mateix esquema \textit{RL-guided MPC}.
+
+\end{document}

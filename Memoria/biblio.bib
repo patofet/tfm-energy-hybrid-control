@@ -1,0 +1,241 @@
+% ============================================================
+%  Bibliografía del TFM
+%  Control híbrid RL + MPC per a BESS en comunitat energètica
+% ============================================================
+
+% ── Aprenentatge per Reforç: algorismes ─────────────────────
+
+@article{schulman2017ppo,
+  author    = {Schulman, John and Wolski, Filip and Dhariwal, Prafulla and
+               Radford, Alec and Klimov, Oleg},
+  title     = {Proximal Policy Optimization Algorithms},
+  journal   = {arXiv preprint},
+  volume    = {arXiv:1707.06347},
+  year      = {2017},
+  url       = {https://arxiv.org/abs/1707.06347}
+}
+
+@article{lillicrap2016ddpg,
+  author    = {Lillicrap, Timothy P. and Hunt, Jonathan J. and Pritzel, Alexander and
+               Heess, Nicolas and Erez, Tom and Tassa, Yuval and Silver, David and
+               Wierstra, Daan},
+  title     = {Continuous Control with Deep Reinforcement Learning},
+  journal   = {International Conference on Learning Representations (ICLR)},
+  year      = {2016},
+  url       = {https://arxiv.org/abs/1509.02971}
+}
+
+@inproceedings{haarnoja2018sac,
+  author    = {Haarnoja, Tuomas and Zhou, Aurick and Abbeel, Pieter and Levine, Sergey},
+  title     = {Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning
+               with a Stochastic Actor},
+  booktitle = {Proceedings of the 35th International Conference on Machine Learning (ICML)},
+  pages     = {1861--1870},
+  year      = {2018},
+  publisher = {PMLR}
+}
+
+@article{mnih2015dqn,
+  author    = {Mnih, Volodymyr and Kavukcuoglu, Koray and Silver, David and
+               Rusu, Andrei A. and Veness, Joel and Bellemare, Marc G. and
+               Graves, Alex and Riedmiller, Martin and Fidjeland, Andreas K. and
+               Ostrovski, Georg and Petersen, Stig and Beattie, Charles and
+               Sadik, Amir and Antonoglou, Ioannis and King, Helen and
+               Kumaran, Dharshan and Wierstra, Daan and Legg, Shane and Hassabis, Demis},
+  title     = {Human-level control through deep reinforcement learning},
+  journal   = {Nature},
+  volume    = {518},
+  number    = {7540},
+  pages     = {529--533},
+  year      = {2015},
+  publisher = {Nature Publishing Group},
+  doi       = {10.1038/nature14236}
+}
+
+@inproceedings{fujimoto2018td3,
+  author    = {Fujimoto, Scott and van Hoof, Herke and Meger, David},
+  title     = {Addressing Function Approximation Error in Actor-Critic Methods},
+  booktitle = {Proceedings of the 35th International Conference on Machine Learning (ICML)},
+  pages     = {1587--1596},
+  year      = {2018},
+  publisher = {PMLR}
+}
+
+% ── Biblioteques de software ─────────────────────────────────
+
+@article{raffin2021stable,
+  author    = {Raffin, Antonin and Hill, Ashley and Gleave, Adam and
+               Kanervisto, Anssi and Ernestus, Maximilian and Dormann, Noah},
+  title     = {Stable-{Baselines3}: Reliable Reinforcement Learning Implementations},
+  journal   = {Journal of Machine Learning Research},
+  volume    = {22},
+  number    = {268},
+  pages     = {1--8},
+  year      = {2021},
+  url       = {http://jmlr.org/papers/v22/20-1364.html}
+}
+
+@article{towers2024gymnasium,
+  author    = {Towers, Mark and Terry, Jordan K. and Kwiatkowski, Ariel and
+               Balis, John U. and Cola, Gianluca de and Deleu, Tristan and
+               Goul{\~a}o, Manuel and Kallinteris, Andreas and Krimmel, Markus and
+               KG, Arjun and Santos, Rodrigo Perez and Serrano, Gil and
+               Sousa, Rodrigo and Szczudlik, Jakub and Wang, Jinming and
+               Younis, Omar G.},
+  title     = {Gymnasium: A Standard Interface for Reinforcement Learning Environments},
+  journal   = {arXiv preprint},
+  volume    = {arXiv:2407.17032},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2407.17032}
+}
+
+@article{diamond2016cvxpy,
+  author    = {Diamond, Steven and Boyd, Stephen},
+  title     = {{CVXPY}: A {P}ython-Embedded Modeling Language for Convex Optimization},
+  journal   = {Journal of Machine Learning Research},
+  volume    = {17},
+  number    = {83},
+  pages     = {1--5},
+  year      = {2016},
+  url       = {https://www.jmlr.org/papers/v17/15-408.html}
+}
+
+@article{goulart2024clarabel,
+  author    = {Goulart, Paul J. and Chen, Yuwen},
+  title     = {{CLARABEL}: An Interior-Point Solver for Conic Programs with
+               Quadratic Objectives},
+  journal   = {arXiv preprint},
+  volume    = {arXiv:2212.09170},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2212.09170}
+}
+
+% ── RL aplicat a sistemes d'energia ─────────────────────────
+
+@article{perera2021rl,
+  author    = {Perera, A. T. D. and Kamalaruban, Parameswaran},
+  title     = {Applications of reinforcement learning in energy systems},
+  journal   = {Renewable and Sustainable Energy Reviews},
+  volume    = {137},
+  pages     = {110618},
+  year      = {2021},
+  publisher = {Elsevier},
+  doi       = {10.1016/j.rser.2020.110618}
+}
+
+@article{nakabi2021deep,
+  author    = {Nakabi, Thimothy Aduda and Toivanen, Pekka},
+  title     = {Deep reinforcement learning for energy management in a microgrid
+               with flexible demand},
+  journal   = {Sustainable Energy, Grids and Networks},
+  volume    = {25},
+  pages     = {100413},
+  year      = {2021},
+  publisher = {Elsevier},
+  doi       = {10.1016/j.segan.2020.100413}
+}
+
+@article{vazquez2019rl,
+  author    = {Vazquez-Canteli, Jose R. and Nagy, Zoltan},
+  title     = {Reinforcement learning for demand response: A review of algorithms
+               and modeling techniques},
+  journal   = {Applied Energy},
+  volume    = {235},
+  pages     = {1072--1089},
+  year      = {2019},
+  publisher = {Elsevier},
+  doi       = {10.1016/j.apenergy.2018.11.002}
+}
+
+% ── Control Predictiu basat en Model (MPC) ───────────────────
+
+@book{camacho2007mpc,
+  author    = {Camacho, Eduardo F. and Bordons, Carlos},
+  title     = {Model Predictive Control},
+  edition   = {2nd},
+  publisher = {Springer},
+  year      = {2007},
+  address   = {London},
+  isbn      = {978-1-85233-694-3}
+}
+
+@article{garcia1989mpc,
+  author    = {Garcia, Carlos E. and Prett, David M. and Morari, Manfred},
+  title     = {Model predictive control: theory and practice --- a survey},
+  journal   = {Automatica},
+  volume    = {25},
+  number    = {3},
+  pages     = {335--348},
+  year      = {1989},
+  publisher = {Elsevier},
+  doi       = {10.1016/0005-1098(89)90002-2}
+}
+
+@article{oldewurtel2012mpc,
+  author    = {Oldewurtel, Frauke and Parisio, Alessandra and Jones, Colin N. and
+               Gyalistras, Dimitrios and Gwerder, Markus and Stauch, Vanessa and
+               Lehmann, Beat and Morari, Manfred},
+  title     = {Use of model predictive control and weather forecasts for energy
+               efficient building climate control},
+  journal   = {Energy and Buildings},
+  volume    = {45},
+  pages     = {15--27},
+  year      = {2012},
+  publisher = {Elsevier},
+  doi       = {10.1016/j.enbuild.2011.09.022}
+}
+
+% ── Comunitats energètiques i BESS ──────────────────────────
+
+@article{koirala2016lec,
+  author    = {Koirala, Binod Prasad and Koliou, Elta and Friege, Jonas and
+               Hakvoort, Rudi A. and Herder, Paulien M.},
+  title     = {Energetic communities for community energy: A review of key issues
+               and trends shaping integrated community energy systems},
+  journal   = {Renewable and Sustainable Energy Reviews},
+  volume    = {56},
+  pages     = {722--744},
+  year      = {2016},
+  publisher = {Elsevier},
+  doi       = {10.1016/j.rser.2015.11.080}
+}
+
+@article{parra2017review,
+  author    = {Parra, David and Swierczynski, Maciej and Stroe, Daniel I. and
+               Norman, Sarah A. and Abdon, Alfred and Worlitschek, J{\"o}rg and
+               O'Doherty, Tim and Rodrigues, Luis and Gillott, Mark and
+               Zhang, Xiang and Bauer, Christian and Patel, Martin K.},
+  title     = {An interdisciplinary review of energy storage for communities:
+               challenges and perspectives},
+  journal   = {Renewable and Sustainable Energy Reviews},
+  volume    = {79},
+  pages     = {730--749},
+  year      = {2017},
+  publisher = {Elsevier},
+  doi       = {10.1016/j.rser.2017.05.003}
+}
+
+% ── Fons teòrics addicionals ─────────────────────────────────
+
+@book{sutton2018rl,
+  author    = {Sutton, Richard S. and Barto, Andrew G.},
+  title     = {Reinforcement Learning: An Introduction},
+  edition   = {2nd},
+  publisher = {MIT Press},
+  year      = {2018},
+  address   = {Cambridge, MA},
+  isbn      = {978-0-262-03924-6}
+}
+
+@article{morstyn2018bess,
+  author    = {Morstyn, Thomas and Hredzak, Branislav and Agelidis, Vassilios G.},
+  title     = {Control Strategies for Microgrids with Distributed Energy Storage
+               Systems: An Overview},
+  journal   = {IEEE Transactions on Smart Grid},
+  volume    = {9},
+  number    = {4},
+  pages     = {3652--3666},
+  year      = {2018},
+  publisher = {IEEE},
+  doi       = {10.1109/TSG.2016.2637958}
+}

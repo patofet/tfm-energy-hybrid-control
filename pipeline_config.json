@@ -1,0 +1,16 @@
+{
+    "n_houses": 20,
+    "n_years": 20,
+    "school_peak_gen_kw": 15.0,
+    "school_battery_kwh": 50.0,
+    "inverter_power_kw": 50.0,
+    "soc_min": 0,
+    "soc_max": 1,
+    "soc_deg_min": 0.1,
+    "soc_deg_max": 0.90,
+    "degradation_cost_eur": 0.01,
+    "price_sell_eur": 0.08,
+    "price_buy_eur": 0.12,
+    "granularity_min": 1,
+    "root_dir": "/path/to/your/data/directory"
+}

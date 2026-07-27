@@ -1,0 +1,286 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[catalan]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{geometry}
+\geometry{top=2.2cm,bottom=2.2cm,left=2.5cm,right=2.5cm}
+\usepackage{microtype}
+\usepackage{parskip}
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{0pt}
+
+\title{\textbf{Control híbrid MPC\,+\,RL per a sistemes d'emmagatzematge\\
+en comunitats energètiques}\\[5pt]
+\large Resum tècnic}
+\author{David Bruguera Tornés \quad|\quad Tutor: Andrés El-Fakdi Sencianes\\
+\small Màster en Ciència de Dades --- Juny 2026}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+% ============================================================
+\paragraph{Cas d'estudi.}
+Comunitat energètica a Cornellà de Llobregat: 20~habitatges i una escola
+amb una instal·lació fotovoltaica compartida de 15~kW de pic i un BESS
+(\emph{Battery Energy Storage System}) de 50~kWh / 50~kW d'inversor.
+El simulador de la comunitat genera 7.300~dies de dades de generació solar,
+demanda agregada i preus PVPC;
+es divideixen en 80\,\% d'entrenament (5.840 dies) i 20\,\% de test (1.460~dies).
+
+% ============================================================
+\paragraph{Notació.}
+\begin{center}\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Símbol} & \textbf{Significat} \\
+\midrule
+$t,\,\tau$                        & instants de temps; $\Delta t = 1\,\text{min} = 1/60\,\text{h}$ \\
+$P_t^{\mathrm{batt}}$             & potència bateria (kW); positiu = càrrega, negatiu = descàrrega \\
+$P_{\max}$                        & potència màxima de l'inversor (50\,kW) \\
+$\mathrm{SoC}_t$                  & estat de càrrega [0,\,1]; capacitat $C_{\mathrm{bat}}=50$\,kWh \\
+$\eta$                            & eficiència de la bateria ($\eta=1$ en la implementació) \\
+$E^+_t,\;E^-_t$                   & energia comprada / venuda a la xarxa (kWh, $\geq 0$) \\
+$p^+_t,\;p^-_t$                   & preu de compra / venda de l'electricitat (€/kWh) \\
+$D_t,\;G_t$                       & demanda total i generació solar (kW) \\
+$c_{\mathrm{deg}}$                & cost de degradació de la bateria (0{,}010\,€/kWh) \\
+$\pi_\theta,\;s_t,\;a_t$          & \textit{policy} RL, vector d'estat ($\mathbb{R}^8$) i acció \\
+$r_t,\;\gamma,\;\hat{A}_t$        & recompensa, factor de descompte i avantatge estimat (GAE) \\
+$\mathrm{SoC}_{\mathrm{ref}}$     & SoC objectiu proposat per l'agent RL (MPC+RL) \\
+$w=20$                            & pes de la penalització de seguiment del SoC (MPCTracker) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================
+\section*{1.\ Model de la bateria}
+
+L'estat de càrrega (\emph{State of Charge}, SoC) evoluciona a cada pas
+de $\Delta t = 1/60$\,h (1~minut) segons:
+\begin{equation}
+  \mathrm{SoC}_{t+1} = \mathrm{SoC}_t
+  + \frac{\eta \cdot P_t^{\mathrm{batt}} \cdot \Delta t}{C_{\mathrm{bat}}},
+  \qquad \eta = 1
+  \label{eq:batt}
+\end{equation}
+amb $C_{\mathrm{bat}}=50$\,kWh i les restriccions físiques
+$P_t^{\mathrm{batt}}\in[-50,\,50]$\,kW i $\mathrm{SoC}_t\in[0,1]$.
+L'eficiència unitària ($\eta=1$) simplifica la dinàmica; addicionalment,
+el cost de degradació es dobla si el SoC opera fora del rang
+$[0{,}10,\;0{,}90]$ per penalitzar l'ús als extrems.
+
+% ============================================================
+\section*{2.\ Controladors}
+
+\subsection*{MPC($H=1$) — greedy d'un sol pas}
+
+En cada minut $t$, resol el problema d'optimització convexa ($H=1$):
+\begin{equation}
+  \max_{\{P_\tau,\,E^+_\tau,\,E^-_\tau\}}
+  \sum_{\tau=t}^{t+H-1}
+  \Bigl[(p^-_\tau \cdot E^-_\tau) - (p^+_\tau \cdot E^+_\tau)
+        - (c_{\mathrm{deg}} \cdot |P_\tau| \cdot \Delta t)\Bigr]
+\end{equation}
+\begin{align*}
+  \text{subjecte a}\quad
+  & E^+_\tau - E^-_\tau = (D_\tau - G_\tau + P_\tau) \cdot \Delta t
+    \quad (E^+_\tau,\,E^-_\tau \geq 0)\\
+  & -P_{\max} \leq P_\tau \leq P_{\max},\quad
+    \mathrm{SoC}_{\min} \leq \mathrm{SoC}_{\tau+1} \leq \mathrm{SoC}_{\max}
+\end{align*}
+S'optimitzen conjuntament la potència de la bateria ($P_\tau$) i els fluxos
+d'energia amb la xarxa ($E^+_\tau$, $E^-_\tau$): es maximitza el que es ven
+($p^-\cdot E^-$, ingressos) menys el que es compra ($p^+\cdot E^+$, cost) i
+la penalització de degradació per ciclatge.
+La restricció de balanç assegura que el flux net amb la xarxa cobreix
+exactament la demanda neta de la comunitat ($D_\tau - G_\tau$) més la
+potència de la bateria; les restriccions de SoC i potència garanteixen
+l'operació física segura.
+Implementat amb CVXPY i el \textit{solver} CLARABEL.
+Sense horitzó, no pot anticipar períodes favorables: com que el preu de
+venda (0,080\,€/kWh) és inferior al de compra (0,120\,€/kWh), el MPC($H=1$)
+opta sistemàticament per la \textbf{inacció} (100\,\% del temps),
+constituint la cota inferior del sistema.
+
+\subsection*{MPC($H=60$) — horitzó de 60~minuts}
+
+Estén el mateix problema a $H=60$ passos amb coneixement perfecte dels
+preus, generació i demanda futurs, resolent un sol
+LP (\textit{Linear Program}) per iteració:
+\begin{equation}
+  \max_{\{P_\tau,\,E^+_\tau,\,E^-_\tau\}}
+  \sum_{\tau=t}^{t+H-1}
+  \Bigl[(p^-_\tau \cdot E^-_\tau) - (p^+_\tau \cdot E^+_\tau)
+        - (c_{\mathrm{deg}} \cdot |P_\tau| \cdot \Delta t)\Bigr]
+\end{equation}
+\begin{align*}
+  \text{subjecte a}\quad
+  & E^+_\tau - E^-_\tau = (D_\tau - G_\tau + P_\tau) \cdot \Delta t,
+    \quad E^+_\tau,\,E^-_\tau \geq 0\\
+  & -P_{\max} \leq P_\tau \leq P_{\max},\quad
+    \mathrm{SoC}_{\min} \leq \mathrm{SoC}_\tau \leq \mathrm{SoC}_{\max}
+\end{align*}
+L'estructura és idèntica al MPC($H=1$) però l'horitzó de 60 passos permet
+anticipar variacions de preus o generació i planificar càrregues/descàrregues
+en moments econòmicament favorables.
+Actua el 7,6\,\% del temps i millora el MPC($H=1$) en
+324\,€ en 1.460 dies (0,22\,€/dia), benefici marginal molt petit.
+
+\subsection*{Agent RL — PPO (\textit{Proximal Policy Optimization})}
+
+\paragraph{\textit{Policy function} i xarxa neuronal.}
+L'agent modela una \textit{policy} $\pi_\theta(a_t\mid s_t)$ parametritzada
+per una xarxa neuronal MLP (\textit{Multi-Layer Perceptron}) amb funció
+d'activació ReLU (\textit{Rectified Linear Unit}).
+La transició entre estats segons aquesta \textit{policy} es defineix com:
+\begin{equation}
+  s_t\in\mathbb{R}^8
+  \;\xrightarrow[{\;a_t\in[-1,1]\;}]{\;}\;
+  s_{t+1}\in\mathbb{R}^8
+\end{equation}
+El vector d'estat $s_t$ conté 8 variables normalitzades: SoC, generació solar,
+demanda escola, demanda habitatges, preu de l'electricitat i codificació cíclica
+del temps ($\sin\theta_t$, $\cos\theta_t$, hora normalitzada).
+L'acció $a_t=1$ correspon a càrrega màxima i $a_t=-1$ a descàrrega màxima.
+
+L'arquitectura \textbf{actor-crític} (\textit{actor-critic}) separa la
+representació en dues xarxes independents: l'\textbf{actor} aprèn la
+\textit{policy} $\pi_\theta(a_t|s_t)$ (quina acció executar donat l'estat),
+i el \textbf{crític} estima el valor esperat de cada estat $V(s_t)$ per
+calcular l'avantatge i guiar el gradient de l'actor sense modificar-ne
+la \textit{policy} directament. Actor: \textbf{1 capa de 64 neurones};
+crític: \textbf{2 capes de 64 neurones}.
+
+\paragraph{\textit{Reward function}.}
+La recompensa principal és el \textbf{guany marginal respecte a no usar
+la bateria}, menys la penalització de degradació:
+\begin{equation}
+  r_t = \underbrace{\bigl(b_t^{\mathrm{batt}} - b_t^{\mathrm{ref}}\bigr)}_{\text{guany marginal}}
+       - \underbrace{\alpha_{\mathrm{deg}}\cdot c_{\mathrm{deg}}\cdot
+         |P_t^{\mathrm{batt}}|\cdot\Delta t}_{\text{cost degradació}},
+  \qquad c_{\mathrm{deg}}=0{,}010\,\text{€/kWh}
+  \label{eq:reward}
+\end{equation}
+on $b_t^{\mathrm{batt}}$ és el benefici econòmic net amb bateria,
+$b_t^{\mathrm{ref}}$ el benefici sense bateria i $\alpha_{\mathrm{deg}}$
+és un factor calibrat experimentalment per evitar la \textit{policy} d'inacció.
+
+\paragraph{Retorn descomptat i objectiu de PPO.}
+L'agent maximitza el retorn esperat descomptat:
+\begin{equation}
+  J(\theta) = \mathbb{E}_{\pi_\theta}\!\left[\sum_{t=0}^{T}\gamma^t r_{t+1}\right],
+  \qquad \gamma = 0{,}999
+\end{equation}
+PPO estima el gradient via l'avantatge generalitzat
+(GAE, \textit{Generalized Advantage Estimation}, $\lambda=0{,}98$) i aplica
+una restricció de \textit{clip} per garantir actualitzacions estables:
+\begin{equation}
+  L^{\mathrm{CLIP}}(\theta)=\mathbb{E}_t\!\left[
+    \min\!\left(r_t(\theta)\,\hat{A}_t,\;
+    \mathrm{clip}(r_t(\theta),1\pm\epsilon)\,\hat{A}_t\right)\right],
+  \quad\epsilon=0{,}2
+\end{equation}
+on $r_t(\theta)=\pi_\theta(a_t|s_t)/\pi_{\theta_{\rm old}}(a_t|s_t)$
+és el ràtio de probabilitats i $\hat{A}_t$ l'avantatge estimat.
+Entrenament: \textbf{2.000.000 timesteps} sobre 5.840 dies d'entrenament.
+
+% ============================================================
+\section*{3.\ Arquitectura híbrida MPC\,+\,RL}
+
+La idea central és combinar l'adaptabilitat de l'agent RL amb la capacitat
+d'optimització multi-pas del MPC. L'arquitectura té dos nivells temporals:
+un \textbf{macro-pas} (decisió de l'RL, cada 60 minuts) i un
+\textbf{micro-pas} (execució del MPC, cada minut).
+
+\paragraph{Macro-pas — decisió de l'RL (cada 60~minuts).}
+L'agent RL observa l'estat $s_t$ i proposa un \textbf{SoC objectiu}:
+\begin{equation}
+  \mathrm{SoC}_{\mathrm{ref}} = \pi_\theta(s_t) \in [0,1]
+\end{equation}
+que la bateria hauria d'assolir en els pròxims 60~minuts.
+Per a aquest agent, l'arquitectura és \textbf{[64,64]} per a l'actor i
+el crític ($\gamma=0{,}994$, $\lambda=0{,}95$), i la recompensa és el
+guany marginal respecte a l'escenari sense bateria
+(eq.~\eqref{eq:reward}).
+
+\paragraph{Micro-pas — execució del MPC (cada minut).}
+Un \textbf{MPCTracker} amb horitzó $H=60$ (CVXPY/CLARABEL) resol en cada
+minut un problema de programació quadràtica que minimitza el cost econòmic
+de transaccions més una penalització per desviació respecte al SoC objectiu:
+\begin{equation}
+  \min_{\{P_\tau,\,E^+_\tau,\,E^-_\tau\}}
+  \sum_{\tau=t}^{t+H-1}
+  \Bigl[(p^+_\tau \cdot E^+_\tau) - (p^-_\tau \cdot E^-_\tau)\Bigr]
+  + w\cdot\bigl(\mathrm{SoC}_{t+H_{\mathrm{rem}}} - \mathrm{SoC}_{\mathrm{ref}}\bigr)^2
+\end{equation}
+\begin{align*}
+  \text{subjecte a}\quad
+  & E^+_\tau - E^-_\tau = (D_\tau - G_\tau + P_\tau)\cdot\Delta t,
+    \quad E^+_\tau,\,E^-_\tau \geq 0\\
+  & -P_{\max} \leq P_\tau \leq P_{\max},\quad
+    \mathrm{SoC}_{\min} \leq \mathrm{SoC}_\tau \leq \mathrm{SoC}_{\max}
+\end{align*}
+Es minimitza el cost net de transaccions amb la xarxa (comprar menys vendre),
+penalitzant la desviació del SoC respecte al SoC objectiu proposat per l'agent.
+La penalització $w\,(\cdot)^2$ s'aplica únicament al pas final del macro-pas
+($t+H_{\mathrm{rem}}$), no a tots els passos de l'horitzó.
+L'acció executada és $P_t^* = P_\tau[0]$ (primer pas de la seqüència òptima),
+i un filtre de seguretat garanteix els límits de SoC i potència.
+
+L'arquitectura garanteix \textbf{zero violacions de restriccions} sense
+necessitat de reentrenar l'agent, i produeix els millors resultats econòmics
+de tots els controladors avaluats.
+
+% ============================================================
+\section*{4.\ Resultats (1.460 dies de test)}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\textbf{Controlador} & \textbf{Benefici net (€)} &
+  \textbf{Estalvi vs MPC($H$=1)} & \textbf{Cicles bat.} &
+  \textbf{SoC mitjà} \\
+\midrule
+MPC($H=1$)      & $-97.826$ & ---                         & 0    & 0{,}000 \\
+MPC($H=60$)     & $-97.502$ & $+324$\,€\; $(+0{,}3\,\%)$ & 247  & 0{,}010 \\
+RL (PPO)        & $-94.035$ & $+3.792$\,€\; $(+3{,}9\,\%)$& 892  & 0{,}230 \\
+\textbf{MPC+RL} & $\mathbf{-87.142}$ &
+  $\mathbf{+10.684}$\,\textbf{€\; $(+10{,}9\,\%)$} &
+  1.951 & \textbf{0{,}705} \\
+\bottomrule
+\end{tabular}
+\medskip\\
+\footnotesize
+\textit{Avaluació sobre 2.102.400 minuts de simulació.
+Temps de decisió: MPC($H=1$) 0,63\,ms; MPC($H=60$) 3,77\,ms;
+RL 0,13\,ms; MPC+RL 2,06\,ms — tots compatibles amb temps real.}
+\end{table}
+
+\textbf{Conclusions principals:}
+
+\begin{itemize}
+  \item \textbf{MPC+RL} és el millor en totes les mètriques econòmiques:
+    estalvi de \textbf{7,32\,€/dia} respecte a la inacció total del
+    MPC($H=1$), i \textbf{4,72\,€/dia} addicionals sobre el RL en solitari.
+
+  \item \textbf{L'agent RL} supera el MPC($H=60$) en 3.468\,€ sense tenir
+    accés explícit a previsions de generació ni demanda; la seva \textit{policy}
+    de ciclatge és quasi-perfectament simètrica
+    (44.583 vs 44.581\,kWh en 1.460~dies).
+
+  \item La \textbf{capa de projecció} garanteix simetria exacta de
+    càrrega/descàrrega (97.527\,kWh en cada sentit) i zero violacions de
+    restriccions; la seguretat operativa no requereix reentrenar l'agent.
+
+  \item L'\textbf{estudi d'ablació} (4 activacions $\times$ 2 valors de
+    GAE-$\lambda$, cadascuna 500k timesteps) confirma que el sistema és
+    robust als hiperparàmetres: rang de variació $<7\,\%$ entre totes
+    les configuracions, gràcies a la simplificació que la capa de
+    projecció imposa sobre la tasca de l'agent.
+\end{itemize}
+
+\end{document}
